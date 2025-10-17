@@ -1,467 +1,61 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Task Tracker — Advanced</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: {
-              900: '#0b1220',
-              800: '#0f172a',
-              700: '#111827',
-              600: '#1f2937',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Drag & Drop -->
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <!-- Date picker (optional graceful fallback) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <meta name="color-scheme" content="dark light">
-  <style>
-    :root { --card: 255 255 255; --muted: 148 163 184; }
-    .glass { background: rgba(255,255,255,.06); backdrop-filter: blur(12px); }
-    .shadow-soft { box-shadow: 0 10px 30px rgba(0,0,0,.25); }
-    .hide-scroll { scrollbar-width: none; }
-    .hide-scroll::-webkit-scrollbar { display: none; }
-  </style>
-</head>
-<body class="h-full bg-gradient-to-br from-ink-900 via-ink-800 to-ink-700 text-slate-100 selection:bg-teal-600/40">
-  <!-- App Shell -->
-  <div class="min-h-screen grid grid-cols-1 lg:grid-cols-[280px_1fr]">
-    <!-- Sidebar -->
-    <aside class="lg:border-r border-white/10 glass">
-      <div class="p-5 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-teal-500/20 grid place-items-center">
-            <i data-lucide="check-circle-2" class="w-5 h-5 text-teal-400"></i>
-          </div>
-          <div>
-            <h1 class="font-semibold text-lg">Task Tracker</h1>
-            <p class="text-xs text-slate-400">Front‑End • Local First</p>
-          </div>
-        </div>
-        <button id="themeToggle" class="p-2 rounded-lg hover:bg-white/10" title="Toggle theme">
-          <i data-lucide="sun" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="px-5 space-y-6">
-        <!-- Quick Stats -->
-        <div class="glass rounded-xl p-4 shadow-soft">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-slate-300">Progress</span>
-            <span id="progressPct" class="font-medium">0%</span>
-          </div>
-          <div class="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
-            <div id="progressBar" class="h-full bg-teal-500 w-0"></div>
-          </div>
-          <div class="mt-3 grid grid-cols-3 text-center text-xs text-slate-300">
-            <div><span id="statAll" class="font-semibold">0</span><div>All</div></div>
-            <div><span id="statActive" class="font-semibold">0</span><div>Active</div></div>
-            <div><span id="statDone" class="font-semibold">0</span><div>Done</div></div>
-          </div>
-        </div>
-
-        <!-- Tag Cloud -->
-        <div class="glass rounded-xl p-4 shadow-soft">
-          <div class="flex items-center justify-between">
-            <h3 class="font-medium">Tags</h3>
-            <button id="addTagBtn" class="p-2 hover:bg-white/10 rounded-lg" title="Add tag"><i data-lucide="plus" class="w-4 h-4"></i></button>
-          </div>
-          <div id="tagList" class="mt-3 flex flex-wrap gap-2"></div>
-        </div>
-
-        <!-- Utilities -->
-        <div class="glass rounded-xl p-4 shadow-soft space-y-2">
-          <button id="exportBtn" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10">
-            <i data-lucide="download" class="w-4 h-4"></i> Export JSON
-          </button>
-          <label class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 cursor-pointer">
-            <i data-lucide="upload" class="w-4 h-4"></i> Import JSON
-            <input id="importInput" type="file" accept="application/json" class="hidden" />
-          </label>
-          <button id="clearDoneBtn" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-rose-300">
-            <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Completed
-          </button>
-        </div>
-
-        <!-- Shortcuts -->
-        <div class="glass rounded-xl p-4 shadow-soft text-xs text-slate-300">
-          <div class="flex items-center gap-2 mb-2"><i data-lucide="keyboard" class="w-4 h-4"></i><span class="text-slate-200 font-medium">Shortcuts</span></div>
-          <ul class="space-y-1">
-            <li><kbd class="px-1.5 py-0.5 bg-white/10 rounded">N</kbd> New task</li>
-            <li><kbd class="px-1.5 py-0.5 bg-white/10 rounded">/</kbd> Search</li>
-            <li><kbd class="px-1.5 py-0.5 bg-white/10 rounded">G</kbd><span> then </span><kbd class="px-1.5 py-0.5 bg-white/10 rounded">A</kbd> All</li>
-            <li><kbd class="px-1.5 py-0.5 bg-white/10 rounded">G</kbd><span> then </span><kbd class="px-1.5 py-0.5 bg-white/10 rounded">T</kbd> Today</li>
-          </ul>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Main -->
-    <main class="p-6 lg:p-8 space-y-6">
-      <!-- Top Bar -->
-      <div class="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
-        <div class="flex items-center gap-2 flex-1 glass rounded-xl px-3 py-2">
-          <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
-          <input id="searchInput" class="w-full bg-transparent outline-none placeholder:text-slate-400" placeholder="Search tasks, tags, notes… (press /)" />
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="glass rounded-xl px-2 py-1.5 flex items-center gap-2">
-            <button data-filter="all" class="chip active">All</button>
-            <button data-filter="active" class="chip">Active</button>
-            <button data-filter="completed" class="chip">Completed</button>
-            <style>.chip{padding:.35rem .6rem;border-radius:.65rem;font-size:.85rem;color:#cbd5e1} .chip.active{background-color:rgba(45,212,191,.15);color:#5eead4}</style>
-          </div>
-          <button id="newTaskBtn" class="inline-flex items-center gap-2 bg-teal-500/90 hover:bg-teal-500 text-ink-900 font-semibold px-4 py-2 rounded-xl shadow-soft">
-            <i data-lucide="plus" class="w-5 h-5"></i> New
-          </button>
-        </div>
-      </div>
-
-      <!-- Filters Row -->
-      <div class="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-        <div class="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-          <i data-lucide="tags" class="w-4 h-4"></i>
-          <select id="tagFilter" class="bg-transparent outline-none">
-            <option value="">All tags</option>
-          </select>
-        </div>
-        <div class="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-          <i data-lucide="flag" class="w-4 h-4"></i>
-          <select id="priorityFilter" class="bg-transparent outline-none">
-            <option value="">Any priority</option>
-            <option value="1">High</option>
-            <option value="2">Med</option>
-            <option value="3">Low</option>
-          </select>
-        </div>
-        <div class="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-          <i data-lucide="calendar" class="w-4 h-4"></i>
-          <input id="dateFilter" class="bg-transparent outline-none" placeholder="Due date" />
-          <button id="clearDateFilter" class="text-slate-400 hover:text-slate-200" title="Clear">×</button>
-        </div>
-      </div>
-
-      <!-- Task List -->
-      <div id="taskContainer" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 hide-scroll min-h-[320px]"></div>
-      <div id="emptyState" class="hidden text-center text-slate-400">
-        <div class="mx-auto w-16 h-16 rounded-2xl bg-white/5 grid place-items-center mb-3"><i data-lucide="inbox" class="w-7 h-7 text-slate-500"></i></div>
-        <p class="text-lg">No tasks match your filters.</p>
-      </div>
-    </main>
-  </div>
-
-  <!-- New/Edit Modal -->
-  <div id="taskModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="w-full max-w-xl glass rounded-2xl p-5 shadow-soft">
-      <div class="flex items-center justify-between mb-3">
-        <h3 id="modalTitle" class="text-xl font-semibold">New Task</h3>
-        <button id="closeModalBtn" class="p-2 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="space-y-3">
-        <input id="taskTitle" class="w-full bg-white/5 px-3 py-2 rounded-xl outline-none" placeholder="Title *" />
-        <textarea id="taskNotes" rows="3" class="w-full bg-white/5 px-3 py-2 rounded-xl outline-none" placeholder="Notes (Markdown supported)"></textarea>
-        <div class="grid sm:grid-cols-3 gap-3">
-          <div class="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl">
-            <i data-lucide="calendar" class="w-4 h-4 text-slate-300"></i>
-            <input id="taskDue" class="bg-transparent outline-none w-full" placeholder="Due date" />
-          </div>
-          <div class="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl">
-            <i data-lucide="flag" class="w-4 h-4 text-slate-300"></i>
-            <select id="taskPriority" class="bg-transparent outline-none w-full">
-              <option value="1">High</option>
-              <option value="2" selected>Medium</option>
-              <option value="3">Low</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-xl">
-            <i data-lucide="tags" class="w-4 h-4 text-slate-300"></i>
-            <input id="taskTags" class="bg-transparent outline-none w-full" placeholder="Tags (comma)" />
-          </div>
-        </div>
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button id="deleteTaskBtn" class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-white/10 text-rose-300"><i data-lucide="trash-2" class="w-4 h-4"></i>Delete</button>
-        <button id="saveTaskBtn" class="inline-flex items-center gap-2 bg-teal-500/90 hover:bg-teal-500 text-ink-900 font-semibold px-4 py-2 rounded-xl"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
-      </div>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Task Tracker — Simple</title>
+    <style>
+      body{font-family:system-ui,Segoe UI,Arial;margin:1rem;background:#f7f7fb}
+      .card{background:#fff;padding:1rem;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+      button{cursor:pointer}
+      .done{text-decoration:line-through;color:#888}
+    </style>
+  </head>
+  <body>
+    <h1>Task Tracker (simple)</h1>
+    <div class="card" style="max-width:600px;margin-bottom:1rem">
+      <!-- Add task form -->
+      <input id="title" placeholder="Task title" style="width:60%" />
+      <button id="add">Add</button>
+      <p style="color:#555;margin-top:.6rem">Add tasks, mark done, or delete. Data is saved in your browser (localStorage).</p>
     </div>
-  </div>
 
-  <!-- Toasts -->
-  <div id="toastStack" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+    <div id="list" class="card" style="max-width:600px"></div>
 
-  <script>
-  // ===== Model & Storage =====
-  const LS_KEY = 'advanced_tasks_v1';
-  const LS_TAGS = 'advanced_tags_v1';
-  const uid = () => Math.random().toString(36).slice(2,9);
+    <script>
+      // Simple model: array of {id, title, done}
+      const KEY = 'simple_tasks_v1';
+      const qs = s => document.querySelector(s);
+      let tasks = JSON.parse(localStorage.getItem(KEY) || '[]');
 
-  let state = {
-    tasks: JSON.parse(localStorage.getItem(LS_KEY) || '[]'),
-    tags: JSON.parse(localStorage.getItem(LS_TAGS) || '[]'),
-    filter: { q: '', status: 'all', tag: '', priority: '', date: '' },
-    editingId: null,
-    theme: localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light')
-  };
+      function save(){ localStorage.setItem(KEY, JSON.stringify(tasks)); }
 
-  const save = () => localStorage.setItem(LS_KEY, JSON.stringify(state.tasks));
-  const saveTags = () => localStorage.setItem(LS_TAGS, JSON.stringify(state.tags));
+      function render(){
+        const out = tasks.map(t=>
+          `<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem" data-id="${t.id}">
+             <input type="checkbox" ${t.done? 'checked':''} />
+             <div style="flex:1" class="${t.done? 'done':''}">${escapeHtml(t.title)}</div>
+             <button class="del">Delete</button>
+           </div>`).join('') || '<div style="color:#666">No tasks yet</div>';
+        qs('#list').innerHTML = out;
 
-  // ===== Utilities =====
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => Array.from(document.querySelectorAll(sel));
-  const icon = (name, extra='w-4 h-4') => `<i data-lucide="${name}" class="${extra}"></i>`;
+        // bind events
+        document.querySelectorAll('#list [data-id]').forEach(el=>{
+          const id = el.dataset.id;
+          el.querySelector('input').onchange = e=>{ toggle(id); };
+          el.querySelector('.del').onclick = ()=>{ remove(id); };
+        });
+      }
 
-  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString() : '';
-  const priorityLabel = p => ({'1':'High','2':'Med','3':'Low'}[String(p)] || 'Med');
-  const priorityColor = p => ({'1':'bg-rose-500/20 text-rose-200','2':'bg-amber-500/20 text-amber-200','3':'bg-emerald-500/20 text-emerald-200'}[String(p)]);
+      function add(title){ if(!title) return; tasks.push({ id: Date.now().toString(), title, done:false }); save(); render(); }
+      function toggle(id){ tasks = tasks.map(t=> t.id===id? {...t, done: !t.done}: t); save(); render(); }
+      function remove(id){ tasks = tasks.filter(t=> t.id!==id); save(); render(); }
 
-  function toast(msg, type='default'){
-    const wrap = document.createElement('div');
-    wrap.className = `glass rounded-xl px-4 py-2 shadow-soft border border-white/10 flex items-center gap-2 ${type==='success'?'text-emerald-200':type==='warn'?'text-amber-200':type==='error'?'text-rose-200':'text-slate-200'}`;
-    wrap.innerHTML = `${icon(type==='success'?'check-circle-2':type==='error'?'alert-octagon':type==='warn'?'alert-triangle':'bell')}<span>${msg}</span>`;
-    $('#toastStack').appendChild(wrap);
-    setTimeout(()=>wrap.remove(), 2500);
-    lucide.createIcons();
-  }
+      qs('#add').onclick = ()=>{ add(qs('#title').value.trim()); qs('#title').value = ''; };
 
-  // ===== Rendering =====
-  function renderTagsUI(){
-    // Sidebar cloud
-    const tl = $('#tagList'); tl.innerHTML='';
-    state.tags.forEach(t=>{
-      const btn = document.createElement('button');
-      btn.className='px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs flex items-center gap-1';
-      btn.innerHTML = `${icon('hash')}<span>${t}</span>`;
-      btn.onclick = ()=>{ state.filter.tag = (state.filter.tag===t?'':t); updateFiltersUI(); render(); };
-      tl.appendChild(btn);
-    });
+      function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    // Filter select
-    const sel = $('#tagFilter');
-    const current = sel.value;
-    sel.innerHTML = `<option value="">All tags</option>` + state.tags.map(t=>`<option ${current===t?'selected':''} value="${t}">${t}</option>`).join('');
-  }
-
-  function renderStats(){
-    const all = state.tasks.length;
-    const done = state.tasks.filter(t=>t.completed).length;
-    const active = all - done;
-    $('#statAll').textContent=all; $('#statActive').textContent=active; $('#statDone').textContent=done;
-    const pct = all? Math.round(done/all*100):0; $('#progressPct').textContent = pct+'%';
-    $('#progressBar').style.width = pct+'%';
-  }
-
-  function render(){
-    save(); renderStats(); renderTagsUI();
-    const list = $('#taskContainer'); list.innerHTML='';
-
-    let items = [...state.tasks];
-    // Filters
-    if(state.filter.status==='active') items = items.filter(t=>!t.completed);
-    if(state.filter.status==='completed') items = items.filter(t=>t.completed);
-    if(state.filter.tag) items = items.filter(t=>t.tags.includes(state.filter.tag));
-    if(state.filter.priority) items = items.filter(t=>String(t.priority)===String(state.filter.priority));
-    if(state.filter.date) items = items.filter(t=>t.due && t.due.slice(0,10)===state.filter.date.slice(0,10));
-    if(state.filter.q){
-      const q = state.filter.q.toLowerCase();
-      items = items.filter(t=> (t.title+t.notes+t.tags.join(',')).toLowerCase().includes(q));
-    }
-
-    $('#emptyState').classList.toggle('hidden', items.length!==0);
-
-    items.sort((a,b)=> (a.completed - b.completed) || (a.order - b.order) || (a.createdAt - b.createdAt));
-
-    for(const t of items){
-      const card = document.createElement('div');
-      card.className = `glass rounded-2xl p-4 shadow-soft border border-white/10 ${t.completed?'opacity-70':''}`;
-      card.dataset.id = t.id;
-      card.innerHTML = `
-        <div class="flex items-start gap-3">
-          <button class="toggle p-2 rounded-lg hover:bg-white/10">${icon(t.completed?'check-square':'square')}</button>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between gap-3">
-              <h4 class="font-semibold truncate ${t.completed?'line-through text-slate-400':''}">${t.title}</h4>
-              <div class="flex items-center gap-1 shrink-0">
-                ${t.due?`<span class="px-2 py-0.5 rounded-lg text-xs bg-white/10 ${new Date(t.due)<new Date()&&!t.completed?'text-rose-200':'text-slate-200'}">${icon('calendar')} ${fmtDate(t.due)}</span>`:''}
-                <span class="px-2 py-0.5 rounded-lg text-xs ${priorityColor(t.priority)}">${icon('flag')} ${priorityLabel(t.priority)}</span>
-              </div>
-            </div>
-            ${t.tags.length?`<div class="mt-2 flex flex-wrap gap-1">${t.tags.map(x=>`<span class="px-2 py-0.5 rounded-lg bg-white/5 text-xs">#${x}</span>`).join('')}</div>`:''}
-            ${t.notes?`<p class="mt-2 text-sm text-slate-300 line-clamp-3 whitespace-pre-wrap">${t.notes}</p>`:''}
-          </div>
-        </div>
-        <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
-          <div>Created ${new Date(t.createdAt).toLocaleString()}</div>
-          <div class="flex items-center gap-1">
-            <button class="edit px-2 py-1 rounded-lg hover:bg-white/10">${icon('edit-3')} Edit</button>
-            <button class="duplicate px-2 py-1 rounded-lg hover:bg-white/10">${icon('copy')} Duplicate</button>
-            <button class="delete px-2 py-1 rounded-lg hover:bg-white/10 text-rose-300">${icon('trash-2')} Delete</button>
-          </div>
-        </div>`;
-      list.appendChild(card);
-    }
-
-    lucide.createIcons();
-
-    // Drag sort across all visible cards
-    if(window.Sortable){
-      new Sortable(list, {
-        animation: 150,
-        ghostClass: 'opacity-50',
-        onEnd: function(){
-          // persist new order (affects only filtered view subset as well)
-          $$('#taskContainer > div').forEach((el, idx)=>{
-            const id = el.dataset.id; const t = state.tasks.find(x=>x.id===id); if(t){ t.order = idx; }
-          });
-          save();
-        }
-      });
-    }
-
-    // Bind card actions
-    $$('#taskContainer .toggle').forEach(btn=> btn.onclick = (e)=>{
-      const id = e.currentTarget.closest('[data-id]').dataset.id; const t = state.tasks.find(x=>x.id===id); t.completed=!t.completed; t.updatedAt=Date.now(); render(); toast(t.completed?'Marked complete':'Marked active','success');
-    });
-    $$('#taskContainer .edit').forEach(btn=> btn.onclick = (e)=> openModal(e.currentTarget.closest('[data-id]').dataset.id));
-    $$('#taskContainer .duplicate').forEach(btn=> btn.onclick = (e)=> duplicateTask(e.currentTarget.closest('[data-id]').dataset.id));
-    $$('#taskContainer .delete').forEach(btn=> btn.onclick = (e)=> deleteTask(e.currentTarget.closest('[data-id]').dataset.id));
-  }
-
-  // ===== Modal Logic =====
-  const modal = $('#taskModal');
-  const modalTitle = $('#modalTitle');
-  const taskTitle = $('#taskTitle');
-  const taskNotes = $('#taskNotes');
-  const taskDue = $('#taskDue');
-  const taskPriority = $('#taskPriority');
-  const taskTags = $('#taskTags');
-  const deleteTaskBtn = $('#deleteTaskBtn');
-
-  function openModal(id=null){
-    state.editingId = id;
-    modal.classList.remove('hidden'); modal.classList.add('flex');
-    if(window.flatpickr){ flatpickr(taskDue, { dateFormat:'Y-m-d', defaultDate: null }); }
-
-    if(id){
-      const t = state.tasks.find(x=>x.id===id);
-      modalTitle.textContent = 'Edit Task';
-      taskTitle.value = t.title; taskNotes.value = t.notes || ''; taskDue.value = t.due? t.due.slice(0,10):''; taskPriority.value = t.priority; taskTags.value = t.tags.join(', ');
-      deleteTaskBtn.classList.remove('hidden');
-    } else {
-      modalTitle.textContent = 'New Task';
-      taskTitle.value=''; taskNotes.value=''; taskDue.value=''; taskPriority.value='2'; taskTags.value='';
-      deleteTaskBtn.classList.add('hidden');
-    }
-    setTimeout(()=>taskTitle.focus(), 50);
-  }
-  function closeModal(){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
-
-  $('#newTaskBtn').onclick = ()=> openModal();
-  $('#closeModalBtn').onclick = closeModal;
-  $('#saveTaskBtn').onclick = saveFromModal;
-  deleteTaskBtn.onclick = ()=>{ deleteTask(state.editingId); closeModal(); };
-
-  function saveFromModal(){
-    const title = taskTitle.value.trim(); if(!title){ toast('Title is required','error'); return; }
-    const notes = taskNotes.value.trim();
-    const due = taskDue.value? new Date(taskDue.value).toISOString(): '';
-    const priority = Number(taskPriority.value||2);
-    const tags = taskTags.value.split(',').map(s=>s.trim()).filter(Boolean);
-
-    // Ensure tags list contains these
-    for(const tag of tags){ if(!state.tags.includes(tag)) state.tags.push(tag); }
-    saveTags();
-
-    if(state.editingId){
-      const t = state.tasks.find(x=>x.id===state.editingId);
-      Object.assign(t, { title, notes, due, priority, tags, updatedAt: Date.now() });
-      toast('Task updated','success');
-    } else {
-      state.tasks.push({ id: uid(), title, notes, due, priority, tags, completed: false, createdAt: Date.now(), updatedAt: Date.now(), order: state.tasks.length });
-      toast('Task created','success');
-    }
-    closeModal(); render();
-  }
-
-  function duplicateTask(id){
-    const t = state.tasks.find(x=>x.id===id);
-    const copy = { ...t, id: uid(), title: t.title + ' (copy)', createdAt: Date.now(), updatedAt: Date.now(), order: state.tasks.length };
-    state.tasks.push(copy); render(); toast('Task duplicated','success');
-  }
-  function deleteTask(id){ state.tasks = state.tasks.filter(x=>x.id!==id); render(); toast('Task deleted','success'); }
-
-  // ===== Filtering & Search =====
-  $('#searchInput').addEventListener('input', (e)=>{ state.filter.q = e.target.value; render(); });
-  $$('.chip').forEach(ch=> ch.onclick = (e)=>{ $$('.chip').forEach(x=>x.classList.remove('active')); e.currentTarget.classList.add('active'); state.filter.status = e.currentTarget.dataset.filter; render(); });
-  $('#tagFilter').onchange = (e)=>{ state.filter.tag = e.target.value; render(); };
-  $('#priorityFilter').onchange = (e)=>{ state.filter.priority = e.target.value; render(); };
-  if(window.flatpickr){ flatpickr('#dateFilter', { dateFormat:'Y-m-d', onChange: (sel)=>{ state.filter.date = sel[0]? sel[0].toISOString():''; render(); } }); }
-  $('#clearDateFilter').onclick = ()=>{ state.filter.date=''; $('#dateFilter').value=''; render(); };
-
-  // ===== Tag add =====
-  $('#addTagBtn').onclick = ()=>{
-    const t = prompt('New tag name'); if(!t) return; if(!state.tags.includes(t)) state.tags.push(t); saveTags(); render();
-  }
-
-  // ===== Utilities toolbar =====
-  $('#exportBtn').onclick = ()=>{
-    const data = { tasks: state.tasks, tags: state.tags };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='tasks-export.json'; a.click(); URL.revokeObjectURL(url);
-    toast('Exported data','success');
-  }
-  $('#importInput').onchange = async (e)=>{
-    const file = e.target.files[0]; if(!file) return; const text = await file.text();
-    try{ const data = JSON.parse(text); state.tasks = data.tasks||[]; state.tags = data.tags||[]; save(); saveTags(); render(); toast('Imported data','success'); }
-    catch{ toast('Invalid JSON','error'); }
-  }
-  $('#clearDoneBtn').onclick = ()=>{ const before = state.tasks.length; state.tasks = state.tasks.filter(t=>!t.completed); if(before!==state.tasks.length){ render(); toast('Cleared completed','success'); } };
-
-  // ===== Theme =====
-  function applyTheme(){ document.documentElement.classList.toggle('dark', state.theme==='dark'); document.body.classList.toggle('bg-white', state.theme==='light'); document.body.classList.toggle('text-slate-900', state.theme==='light'); }
-  applyTheme();
-  $('#themeToggle').onclick = ()=>{ state.theme = state.theme==='dark'?'light':'dark'; localStorage.setItem('theme', state.theme); applyTheme(); };
-
-  // ===== Shortcuts =====
-  window.addEventListener('keydown', (e)=>{
-    if(e.key==='/' && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='TEXTAREA'){ e.preventDefault(); $('#searchInput').focus(); }
-    if(e.key.toLowerCase()==='n' && !$('#taskModal').classList.contains('flex')){ openModal(); }
-    // g a / g t
-    if(e.key.toLowerCase()==='g'){ let next = true; const handler=(ev)=>{ if(!next) return; next=false; if(ev.key.toLowerCase()==='a'){ document.querySelector('[data-filter="all"]').click(); } if(ev.key.toLowerCase()==='t'){ if(window.flatpickr){ const today = new Date().toISOString().slice(0,10); state.filter.date = new Date(today).toISOString(); $('#dateFilter').value=today; render(); } } window.removeEventListener('keydown', handler); }; window.addEventListener('keydown', handler, { once:true }); }
-  });
-
-  // ===== Init =====
-  function bootstrap(){
-    // Seed demo if empty
-    if(state.tasks.length===0){
-      state.tags = ['Work','Personal','School'];
-      state.tasks = [
-        { id: uid(), title:'Design landing page', notes:'Hero section, CTA, responsive grid', due:new Date(Date.now()+86400000).toISOString(), priority:1, tags:['Work'], completed:false, createdAt:Date.now(), updatedAt:Date.now(), order:0 },
-        { id: uid(), title:'Buy groceries', notes:'milk, eggs, greens', due:'', priority:3, tags:['Personal'], completed:false, createdAt:Date.now(), updatedAt:Date.now(), order:1 },
-        { id: uid(), title:'Study linear algebra', notes:'eigenvalues & matrix expo', due:new Date(Date.now()+3*86400000).toISOString(), priority:2, tags:['School'], completed:false, createdAt:Date.now(), updatedAt:Date.now(), order:2 },
-      ];
-      save(); saveTags();
-    }
-    render();
-  }
-
-  document.addEventListener('DOMContentLoaded', ()=>{ lucide.createIcons(); bootstrap(); });
-  </script>
-</body>
+      render();
+    </script>
+  </body>
 </html>
